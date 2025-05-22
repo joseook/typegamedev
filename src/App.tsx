@@ -130,10 +130,17 @@ const App: React.FC = () => {
   // Handle GitHub login
   const handleLogin = async () => {
     try {
+      // Determine the correct redirect URL based on environment
+      // Use the Vercel URL in production, or localhost in development
+      const redirectUrl = 
+        window.location.hostname === 'localhost' 
+          ? window.location.origin 
+          : 'https://typegamedev.vercel.app';
+          
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: redirectUrl
         }
       });
 

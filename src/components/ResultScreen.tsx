@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TestResult } from '../types';
-import { Trophy, RotateCcw, Share, Copy, Twitter, Check, Github, Star, Zap, BarChart3 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Trophy, RotateCcw, Copy, Twitter, Check, Star, Zap, BarChart3 } from 'lucide-react';
 
 interface ResultScreenProps {
   result: TestResult;
@@ -8,6 +9,79 @@ interface ResultScreenProps {
 }
 
 const ResultScreen: React.FC<ResultScreenProps> = ({ result, onRestart }) => {
+  // Salvar resultado no leaderboard se o usuário estiver logado
+  useEffect(() => {
+    const saveResultToLeaderboard = async () => {
+      try {
+        // Verificar se o usuário está logado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('Usuário não está logado, resultado não será salvo no leaderboard');
+          return;
+        }
+        
+        // Buscar entrada existente do usuário no leaderboard
+        const { data: existingEntry } = await supabase
+          .from('leaderboard')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (existingEntry) {
+          // Atualizar entrada existente se o novo WPM for maior que o registrado
+          if (result.wpm > existingEntry.highest_wpm) {
+            await supabase
+              .from('leaderboard')
+              .update({
+                highest_wpm: result.wpm,
+                highest_accuracy: result.accuracy > existingEntry.highest_accuracy 
+                  ? result.accuracy 
+                  : existingEntry.highest_accuracy,
+                games_played: existingEntry.games_played + 1,
+                updated_at: new Date()
+              })
+              .eq('user_id', user.id);
+            
+            console.log('Leaderboard atualizado com novo recorde!');
+          } else {
+            // Apenas incrementar o contador de jogos
+            await supabase
+              .from('leaderboard')
+              .update({
+                highest_accuracy: result.accuracy > existingEntry.highest_accuracy 
+                  ? result.accuracy 
+                  : existingEntry.highest_accuracy,
+                games_played: existingEntry.games_played + 1,
+                updated_at: new Date()
+              })
+              .eq('user_id', user.id);
+            
+            console.log('Contador de jogos atualizado no leaderboard');
+          }
+        } else {
+          // Criar nova entrada no leaderboard para este usuário
+          await supabase
+            .from('leaderboard')
+            .insert({
+              user_id: user.id,
+              username: user.user_metadata.user_name || user.user_metadata.preferred_username || 'Coder',
+              avatar_url: user.user_metadata.avatar_url,
+              highest_wpm: result.wpm,
+              highest_accuracy: result.accuracy,
+              games_played: 1
+            });
+          
+          console.log('Nova entrada criada no leaderboard!');
+        }
+      } catch (error) {
+        console.error('Erro ao salvar resultado no leaderboard:', error);
+      }
+    };
+    
+    saveResultToLeaderboard();
+  }, [result]);
+  
   const [showCopied, setShowCopied] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
 
