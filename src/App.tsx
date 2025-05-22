@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { languages } from './data/languages';
 import { getRandomSnippet } from './data/snippets';
 import { Snippet } from './types';
-import { supabase } from './lib/supabase';
+import { supabase, signInWithGitHub } from './lib/supabase';
 
 // Components
 import Header from './components/Header';
@@ -127,23 +127,10 @@ const App: React.FC = () => {
     setIsDarkMode(!isDarkMode);
   };
 
-  // Handle GitHub login
+  // Handle GitHub login usando o helper que garante URL de redirecionamento correta
   const handleLogin = async () => {
     try {
-      // Determine the correct redirect URL based on environment
-      // Use the Vercel URL in production, or localhost in development
-      const redirectUrl = 
-        window.location.hostname === 'localhost' 
-          ? window.location.origin 
-          : 'https://typegamedev.vercel.app';
-          
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: redirectUrl
-        }
-      });
-
+      const { error } = await signInWithGitHub();
       if (error) throw error;
     } catch (error) {
       console.error('Error logging in:', error);
