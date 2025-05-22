@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Keyboard, Moon, Sun, Github, Award, Info, Menu, X } from 'lucide-react';
 import Leaderboard from './Leaderboard';
+import Portal from './Portal';
 
 interface HeaderProps {
   isDarkMode: boolean;
@@ -174,93 +175,96 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* Portals para os modais para evitar problemas de z-index */}
-      {/* Leaderboard Modal */}
+      {/* Leaderboard Modal usando Portal para garantir que fique acima de tudo */}
       {showLeaderboard && (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0}}>
-          <div className="relative bg-gray-900 w-full max-w-4xl rounded-lg shadow-xl">
-            <div className="flex justify-between items-center p-4 border-b border-gray-800">
-              <h2 className="text-xl font-bold flex items-center">
-                <Award className="h-5 w-5 text-yellow-400 mr-2" />
-                Leaderboard
-              </h2>
-              <button 
-                onClick={() => setShowLeaderboard(false)}
-                className="p-2 rounded-full hover:bg-gray-800/50 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-2">
-              <Leaderboard />
+        <Portal>
+          <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="relative bg-gray-900 w-full max-w-4xl rounded-lg shadow-xl">
+              <div className="flex justify-between items-center p-4 border-b border-gray-800">
+                <h2 className="text-xl font-bold flex items-center">
+                  <Award className="h-5 w-5 text-yellow-400 mr-2" />
+                  Leaderboard
+                </h2>
+                <button 
+                  onClick={() => setShowLeaderboard(false)}
+                  className="p-2 rounded-full hover:bg-gray-800/50 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-2">
+                <Leaderboard />
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
       
-      {/* About Modal */}
+      {/* About Modal usando Portal para garantir que fique acima de tudo */}
       {showAbout && (
-        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0}}>
-          <div className="relative bg-gray-900 w-full max-w-2xl rounded-lg shadow-xl">
-            <div className="flex justify-between items-center p-4 border-b border-gray-800">
-              <h2 className="text-xl font-bold flex items-center">
-                <Info className="h-5 w-5 text-blue-400 mr-2" />
-                About TypeGameDev
-              </h2>
-              <button 
-                onClick={() => setShowAbout(false)}
-                className="p-2 rounded-full hover:bg-gray-800/50 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-indigo-400 mb-2">What is TypeGameDev?</h3>
-                <p className="text-gray-300 leading-relaxed">
-                  TypeGameDev is an educational platform designed to help developers improve their coding speed and accuracy. 
-                  By practicing typing real code snippets in various programming languages, developers can enhance their 
-                  productivity and reduce the cognitive overhead of typing, allowing them to focus more on problem-solving 
-                  and creative coding aspects.
-                </p>
+        <Portal>
+          <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="relative bg-gray-900 w-full max-w-2xl rounded-lg shadow-xl">
+              <div className="flex justify-between items-center p-4 border-b border-gray-800">
+                <h2 className="text-xl font-bold flex items-center">
+                  <Info className="h-5 w-5 text-blue-400 mr-2" />
+                  About TypeGameDev
+                </h2>
+                <button 
+                  onClick={() => setShowAbout(false)}
+                  className="p-2 rounded-full hover:bg-gray-800/50 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Educational Purpose</h3>
-                <p className="text-gray-300 leading-relaxed">
-                  Research shows that typing proficiency directly impacts a developer's productivity. TypeGameDev provides 
-                  a focused environment where developers can practice typing code in a distraction-free interface, with 
-                  real-time feedback on speed and accuracy. Regular practice with TypeGameDev can help reduce errors, 
-                  increase coding speed, and build muscle memory for common programming patterns.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-indigo-400 mb-2">Features</h3>
-                <ul className="list-disc pl-5 text-gray-300 space-y-1">
-                  <li>Practice typing in multiple programming languages</li>
-                  <li>Real-time speed (WPM) and accuracy tracking</li>
-                  <li>Smart cursor positioning and line navigation</li>
-                  <li>Leaderboard to compete with other developers</li>
-                  <li>Dark mode for reduced eye strain</li>
-                  <li>GitHub integration for account management</li>
-                </ul>
-              </div>
-              
-              <div className="pt-2 border-t border-gray-800">
-                <p className="text-gray-400 text-sm">
-                  <span className="font-medium">Created by:</span> <a href="https://github.com/joseook" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors">joseook</a>
-                </p>
-                <p className="text-gray-400 text-sm mt-1">
-                  <span className="font-medium">Inspired by:</span> <a href="https://www.speedtyper.dev" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors">speedtyper.dev</a>
-                </p>
-                <p className="text-gray-400 text-sm mt-3">
-                  TypeGameDev is currently in beta. Your feedback is valuable to us as we continue to improve the platform.
-                </p>
+              <div className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-2">What is TypeGameDev?</h3>
+                  <p className="text-gray-300 leading-relaxed">
+                    TypeGameDev is an educational platform designed to help developers improve their coding speed and accuracy. 
+                    By practicing typing real code snippets in various programming languages, developers can enhance their 
+                    productivity and reduce the cognitive overhead of typing, allowing them to focus more on problem-solving 
+                    and creative coding aspects.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-2">Educational Purpose</h3>
+                  <p className="text-gray-300 leading-relaxed">
+                    Research shows that typing proficiency directly impacts a developer's productivity. TypeGameDev provides 
+                    a focused environment where developers can practice typing code in a distraction-free interface, with 
+                    real-time feedback on speed and accuracy. Regular practice with TypeGameDev can help reduce errors, 
+                    increase coding speed, and build muscle memory for common programming patterns.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-400 mb-2">Features</h3>
+                  <ul className="list-disc pl-5 text-gray-300 space-y-1">
+                    <li>Practice typing in multiple programming languages</li>
+                    <li>Real-time speed (WPM) and accuracy tracking</li>
+                    <li>Smart cursor positioning and line navigation</li>
+                    <li>Leaderboard to compete with other developers</li>
+                    <li>Dark mode for reduced eye strain</li>
+                    <li>GitHub integration for account management</li>
+                  </ul>
+                </div>
+                
+                <div className="pt-2 border-t border-gray-800">
+                  <p className="text-gray-400 text-sm">
+                    <span className="font-medium">Created by:</span> <a href="https://github.com/joseook" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors">joseook</a>
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    <span className="font-medium">Inspired by:</span> <a href="https://www.speedtyper.dev" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors">speedtyper.dev</a>
+                  </p>
+                  <p className="text-gray-400 text-sm mt-3">
+                    TypeGameDev is currently in beta. Your feedback is valuable to us as we continue to improve the platform.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </header>
   );

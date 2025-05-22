@@ -21,12 +21,20 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const codeDisplayRef = useRef<HTMLDivElement>(null);
-  const [showHint, setShowHint] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
   
   // Track current line for auto-scrolling
   const [currentLine, setCurrentLine] = useState(0);
   const activeLineRef = useRef<HTMLDivElement>(null);
+  
+  // Add a cooldown to prevent false errors right after line navigation
+  const [lineChangeCooldown, setLineChangeCooldown] = useState(false);
+  
+  // Track line navigation precisely
+  const [navigationInProgress, setNavigationInProgress] = useState(false);
+  
+  // Controls cursor visibility for a more natural editing experience
+  const [showCursor, setShowCursor] = useState(true);
 
   // Focus the editor on mount and when completed changes
   useEffect(() => {
@@ -63,6 +71,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       
       // If Shift+Enter was pressed or we're at a line break, find the next meaningful line
       if (wasShiftEnterPressed || actualLineIndex < snippet.code.split('\n').length - 1) {
+        // Set navigation flag to prevent false errors
+        setNavigationInProgress(true);
+        setLineChangeCooldown(true);
         // Get the actual target line index, skipping empty lines
         const targetLineIndex = findNextCodeLine(actualLineIndex);
         
@@ -281,67 +292,24 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   };
 
-  // Highlight correct/incorrect characters
-  const renderHighlightedCode = () => {
-    const targetCode = snippet.code;
-    const lines = targetCode.split('\n');
-    
-    // Add a cursor indicator
-    const showCursorAt = showHint ? cursorPosition : -1;
-    
-    // Calculate overall character index for each line
-    let charIndexOffset = 0;
-    
-    return lines.map((line, lineIdx) => {
-      const chars = line.split('');
-      // Detect if this is an empty line (only whitespace)
-      const isEmpty = line.trim().length === 0;
-      
-      const lineResult = (
-        <div 
-          key={`line-${lineIdx}`} 
-          className={`leading-6 whitespace-pre overflow-visible ${lineIdx === currentLine ? 'bg-gray-800/40 transition-colors duration-200' : ''}`}
-          ref={lineIdx === currentLine ? activeLineRef : undefined}
-          data-line-index={lineIdx}
-        >
-          {chars.map((char, charIdx) => {
-            const index = charIndexOffset + charIdx;
-            const isTyped = index < userInput.length;
-            const style = getTokenStyle(char, index, isTyped, lineIdx);
-            
-            if (char === ' ') {
-              return (
-                <span key={`char-${index}`} className={style}>
-                  {index === showCursorAt && <span className="bg-indigo-500 animate-pulse w-[2px] h-[1.15em] inline-block relative top-[0.2em] mx-[1px]"></span>}
-                  &nbsp;
-                </span>
-              );
-            }
-            
-            return (
-              <span key={`char-${index}`} className={style}>
-                {index === showCursorAt && <span className="bg-indigo-500 animate-pulse w-[2px] h-[1.15em] inline-block relative top-[0.2em] mx-[1px]"></span>}
-                {char}
-              </span>
-            );
-          })}
-        </div>
-      );
-      
-      // Increase offset for next line (add 1 for the newline character)
-      charIndexOffset += line.length + 1;
-      
-      return lineResult;
-    });
-  };
-
   // Get token styling for syntax highlighting and typed/untyped status
   const getTokenStyle = (char: string, index: number, isTyped: boolean, lineIdx: number) => {
     // Add special case for active line to avoid false errors during navigation
     const isActiveLine = lineIdx === currentLine;
+    const isNavigating = navigationInProgress || lineChangeCooldown;
     
     // Basic styling for typed characters (correct/incorrect)
     if (isTyped) {
+      // Skip ALL error marking during navigation or cooldown period
+      if (isNavigating) {
+        if (userInput[index] === char) {
+          return 'text-green-400 font-medium'; // Still mark correct characters
+        } else {
+          // But don't mark errors during navigation
+          return isDarkMode ? 'opacity-60 text-gray-400' : 'opacity-60 text-gray-600';
+        }
+      }
+      
       // When the cursor moves to a new line via Shift+Enter, we don't want to show errors
       // in the previous line if we're still at the beginning of typing the current line
       if (isActiveLine && userInput.split('\n')[lineIdx]?.length <= 2) {
@@ -397,9 +365,69 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   };
 
-  // Remove unused firstContentIndex variable throughout the code
+  // Highlight correct/incorrect characters
+  const renderHighlightedCode = () => {
+    const targetCode = snippet.code;
+    const lines = targetCode.split('\n');
+    
+    // Calculate overall character index for each line
+    let charIndexOffset = 0;
+    
+    return lines.map((line, lineIdx) => {
+      const chars = line.split('');
+      // Check for line properties that affect rendering
+      const isCurrentlyBeingNavigated = navigationInProgress && lineIdx === currentLine;
+      
+      const lineResult = (
+        <div 
+          key={`line-${lineIdx}`} 
+          className={`leading-6 whitespace-pre overflow-visible ${lineIdx === currentLine ? 'bg-gray-800/40 transition-colors duration-200' : ''} ${isCurrentlyBeingNavigated ? 'border-l-2 border-indigo-500' : ''}`}
+          ref={lineIdx === currentLine ? activeLineRef : undefined}
+          data-line-index={lineIdx}
+        >
+          {chars.map((char, charIdx) => {
+            const index = charIndexOffset + charIdx;
+            const isTyped = index < userInput.length;
+            const style = getTokenStyle(char, index, isTyped, lineIdx);
+            const cursorHere = index === cursorPosition && lineIdx === currentLine && showCursor;
+            
+            if (char === ' ') {
+              return (
+                <span key={`char-${index}`} className={style}>
+                  {cursorHere && <span className="bg-indigo-500 animate-pulse w-[2px] h-[1.15em] inline-block relative top-[0.2em] mx-[1px]"></span>}
+                  &nbsp;
+                </span>
+              );
+            }
+            
+            return (
+              <span key={`char-${index}`} className={style}>
+                {cursorHere && <span className="bg-indigo-500 animate-pulse w-[2px] h-[1.15em] inline-block relative top-[0.2em] mx-[1px]"></span>}
+                {char}
+              </span>
+            );
+          })}
+        </div>
+      );
+      
+      // Increase offset for next line (add 1 for the newline character)
+      charIndexOffset += line.length + 1;
+      
+      return lineResult;
+    });
+  };
+
+  // Blink cursor for more natural editing experience
   useEffect(() => {
-    // Check current line on focus events to ensure accuracy
+    const interval = setInterval(() => {
+      setShowCursor(prev => !prev);
+    }, 530); // Slightly longer than standard cursor blink
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check current line on focus events to ensure accuracy
+  useEffect(() => {
     const handleFocus = () => {
       if (editorRef.current) {
         const cursorPos = editorRef.current.selectionStart;
@@ -410,6 +438,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         // Important: Force refresh of line highlighting
         setCurrentLine(actualLineNumber);
         setCursorPosition(cursorPos); // Update cursor position too
+        
+        // Clear any navigation state when focus is gained
+        setNavigationInProgress(false);
+        setLineChangeCooldown(false);
       }
     };
     
@@ -423,6 +455,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         
         setCurrentLine(actualLineNumber);
         setCursorPosition(cursorPos);
+        
+        // Clear any navigation state when clicked
+        setNavigationInProgress(false);
       }
     };
     
@@ -514,6 +549,10 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             newText.split('\n').slice(0, nextLineIndex + 1).join('\n').length + firstNonWhitespaceIndex :
             newText.split('\n').slice(0, nextLineIndex + 1).join('\n').length + indentation.length;
           
+          // Set navigation flags
+          setNavigationInProgress(true);
+          setLineChangeCooldown(true);
+          
           // Apply changes
           onInputChange(newText);
           
@@ -543,6 +582,16 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
                 }
                 return prev; // No need to update if it's the same
               });
+              
+              // Reset navigation flag after a short delay
+              setTimeout(() => {
+                setNavigationInProgress(false);
+                
+                // Reset the cooldown after the error prevention window
+                setTimeout(() => {
+                  setLineChangeCooldown(false);
+                }, 500);
+              }, 50);
             }
           }, 10);
         }
@@ -553,9 +602,27 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onInputChange, snippet.code]);
 
+  // Cleanup and help with auto-focus
+  useEffect(() => {
+    if (isCompleted) {
+      if (editorRef.current) {
+        editorRef.current.blur();
+      }
+    }
+  }, [isCompleted]);
+
+  // Before unmounting, clear any timers
+  useEffect(() => {
+    return () => {
+      // Clear any remaining timers
+      if (editorRef.current) {
+        editorRef.current.blur();
+      }
+    };
+  }, []);
+
   return (
     <div className={`relative w-full rounded-lg overflow-hidden font-mono mb-4 shadow-lg ${isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-300'}`}>
-      {/* We don't need the hidden detector anymore */}
       <div className={`flex py-2 px-4 border-b justify-between items-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
           <div className="flex items-center space-x-2 overflow-hidden">
             <div className="flex space-x-1 flex-none">
@@ -597,8 +664,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
               editorRef.current.focus();
             }
           }}
-          onMouseEnter={() => setShowHint(true)}
-          onMouseLeave={() => setShowHint(false)}
         >
           <div style={{ display: 'inline-block', minWidth: '100%', width: 'max-content' }}>
             {renderHighlightedCode()}

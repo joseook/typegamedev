@@ -41,12 +41,42 @@ const App: React.FC = () => {
     resetTest
   } = useTypingTest(currentSnippet);
 
-  // Initialize auth state
+  // Initialize auth state and get user data
   useEffect(() => {
+    // Check if user is already logged in on initial load
+    const checkInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      
+      if (session?.user) {
+        // Set user avatar and store it in localStorage for persistence
+        const avatarUrl = session.user.user_metadata.avatar_url;
+        setUserAvatar(avatarUrl);
+        localStorage.setItem('userAvatar', avatarUrl);
+        
+        console.log('User logged in:', session.user.user_metadata.user_name || session.user.user_metadata.preferred_username);
+      } else {
+        // Try to get avatar from localStorage if exists
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+          setUserAvatar(savedAvatar);
+        }
+      }
+    };
+    
+    checkInitialSession();
+    
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsLoggedIn(!!session);
+      
       if (session?.user) {
-        setUserAvatar(session.user.user_metadata.avatar_url);
+        const avatarUrl = session.user.user_metadata.avatar_url;
+        setUserAvatar(avatarUrl);
+        localStorage.setItem('userAvatar', avatarUrl);
+      } else if (event === 'SIGNED_OUT') {
+        setUserAvatar(undefined);
+        localStorage.removeItem('userAvatar');
       }
     });
 
@@ -256,6 +286,8 @@ const App: React.FC = () => {
                     snippet={currentSnippet}
                     userInput={currentInput}
                     onInputChange={handleInputChange}
+                    errors={errors}
+                    isCompleted={isCompleted}
                     isDarkMode={isDarkMode} // Pass theme for potential editor styling
                   />
                 </>
